@@ -63,11 +63,13 @@ python scripts/detect.py path/to/text.txt --json
 5. Parse the JSON result and validate that it includes:
 
 - `score`
-- `confidence`
 - `verdict`
+- `confidence`
+- `word_count`
 - `conclusion`
 - `signals`
 - `caveats`
+- `next_steps`
 
 6. Respond in this order:
 

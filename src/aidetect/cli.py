@@ -40,6 +40,18 @@ def main(argv: list[str] | None = None) -> int:
     else:
         text = sys.stdin.read()
 
+    # An empty input gives a meaningless "no signal" result, which is easy to
+    # mistake for "the analyzer ran but found nothing suspicious". The
+    # analyzer already recommends a longer sample for short inputs; an
+    # entirely empty input is worse than short and deserves an explicit
+    # diagnostic and a non-zero exit so callers (CI, scripts) can detect it.
+    if not text.strip():
+        print(
+            "No input text provided. Pass a file path or pipe text on stdin.",
+            file=sys.stderr,
+        )
+        return 2
+
     result = analyze_text(text)
     if args.json:
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))

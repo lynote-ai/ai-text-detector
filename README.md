@@ -25,7 +25,9 @@
   <a href="#use-cases">Use Cases</a>
 </p>
 
-This project is intentionally modest. It estimates **AI-like signals**, not proof of authorship.
+**Other Quality Projects**</br>
+AI Humanize Text:https://github.com/lynote-ai/humanize-text</br>
+AI Image Detector:https://github.com/lynote-ai/ai-image-detector</br>
 
 ## Why This Exists
 

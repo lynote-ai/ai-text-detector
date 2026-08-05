@@ -1,4 +1,4 @@
-# Best AI Text Detector
+# Explainable AI Text Risk Analyzer
 
 <p align="center">
   <img src="assets/hero.svg" alt="AI Detector Skill hero" width="100%" />

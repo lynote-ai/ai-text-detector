@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lynote-ai/ai-detector-skill/actions/workflows/ci.yml"><img src="https://github.com/lynote-ai/ai-detector-skill/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/lynote-ai/ai-text-detector/actions/workflows/ci.yml"><img src="https://github.com/lynote-ai/ai-text-detector/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/python-3.9%2B-3776ab" alt="Python 3.9+" />
   <img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT License" />
   <img src="https://img.shields.io/badge/network-none-f59e0b" alt="No Network" />

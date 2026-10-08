@@ -1,0 +1,104 @@
+schema_version: 1
+version:
+  id: detection-model-pipeline
+  status: prepared
+  created_on: '2026-09-29'
+  objective: Build, calibrate, evaluate, and serve a two-level AI-text detector with bounded public demos.
+planned_training:
+  stages:
+  - name: prepare-dataset
+    status: implemented
+    objective: Turn a detection-service log export into deduplicated two-level soft-label JSONL with a deterministic train/validation split.
+  - name: train-hier-model
+    status: implemented
+    objective: Jointly distill document-level and sentence-level soft labels under L = L_doc + alpha * L_sent on a ModernBERT or XLM-R backbone.
+  - name: calibrate-document-head
+    status: implemented
+    objective: Fit one temperature on the validation split so document-head probabilities are better calibrated.
+  - name: evaluate-hier-model
+    status: implemented
+    objective: Report two-level classification metrics, language-grouped agreement, and an optional document-only baseline.
+  - name: serve-http-api
+    status: implemented
+    objective: Serve the joint model behind a FastAPI envelope with sentence splitting, language detection, and dynamic batching.
+inputs:
+  data_revisions: []
+  input_sources:
+  - id: detection-log-export
+    status: external-not-distributed
+    path: supplied-by-user
+    format: detection-service-api-log-csv
+    file_pattern: '*.csv'
+    intended_use: two-level-soft-label-distillation
+  - id: prior-detection-log-exports
+    status: external-not-distributed
+    path: supplied-by-user
+    format: detection-service-api-log-csv
+    file_pattern: '*.csv'
+    intended_use: cross-run-text-deduplication
+  - id: prior-dataset-scan-ids
+    status: private-not-distributed
+    path: supplied-by-user
+    format: jsonl-with-scan-id
+    file_pattern: '*.jsonl'
+    intended_use: scan-id-leakage-exclusion
+  - id: backbone-checkpoints
+    status: external-public
+    path: huggingface-hub-or-local-snapshot
+    format: pretrained-transformer-checkpoint
+    file_pattern: xlm-roberta-large,ModernBERT-base
+    intended_use: cold-start-initialization
+build_parameters:
+  random_seed: 42
+  max_sentences_per_doc: 256
+  min_word_count: 10
+  validation_split_rule: 'md5(scan_id)[:8] % 10 == 1'
+  sentence_max_length: 128
+  document_max_length: 512
+  loss: 'L = L_doc + alpha * L_sent'
+  alpha: 1.0
+  learning_rate_by_model_type:
+    xlmr: 2.0e-5
+    modernbert: 2.0e-5
+  batch_size: 4
+  eval_batch_size: 8
+  gradient_accumulation_steps: 4
+  max_epochs: 10
+  early_stop_patience: 6
+  min_epochs: 3
+  warmup_ratio: 0.1
+  classifier_dropout: 0.1
+  doc_class_weights: [1.0, 1.0, 2.0]
+  sent_class_weights: [1.0, 1.0, 2.0]
+  oversample_languages: [es, pt, zh]
+  oversample_factor: 2.0
+  confidence_thresholds: {reject: 0.33, low: 0.6, medium: 0.8}
+  max_batch_documents: 32
+  public_demo_record_limit_per_stage: 20
+artifacts:
+  processed_data:
+  - id: demo-train-hier
+    status: public-demo
+    path: data/demos/01_prepare/train_hier_demo.jsonl
+    record_count: 20
+  - id: demo-val-hier
+    status: public-demo
+    path: data/demos/01_prepare/val_hier_demo.jsonl
+    record_count: 5
+  - id: demo-calibration
+    status: public-demo
+    path: data/demos/02_calibrate/calibration_demo.json
+    record_count: 1
+  - id: demo-detect-response
+    status: public-demo
+    path: data/demos/03_serve/detect_response_demo.json
+    record_count: 1
+  checkpoints: []
+  evaluations: []
+notes:
+- Full detection-log exports, the derived training JSONL, and model checkpoints are intentionally excluded from this repository.
+- Upstream log exports contain user-supplied text; they are never distributed here. Every public demo record is synthetic and carries the provenance key "source: synthetic", which make demo-validate enforces.
+- The two label fields gptzero_doc_class and gptzero_language are read verbatim from the upstream detection-service log and keep their names for schema compatibility. They label an external service's output, not this project's judgment.
+- Document and sentence scores are model estimates. They are an advisory signal for triage, not proof of authorship, and results for low-confidence categories must be reviewed by a human before any consequential use.
+- Thresholds, weights, and the split rule are recorded here so a full run is reproducible; the demo files are bounded views of the same schemas, not of the source data.
+- Stages train-hier-model and evaluate-hier-model have no public demo file because their artifacts are model weights and run-specific reports.

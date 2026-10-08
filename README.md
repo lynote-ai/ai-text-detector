@@ -29,6 +29,8 @@
 AI Humanize Text:https://github.com/lynote-ai/humanize-text</br>
 AI Image Detector:https://github.com/lynote-ai/ai-image-detector</br>
 
+> **Two tiers in this repo.** This page documents the **lightweight local analyzer** — an explainable, no-network CLI/skill for fast triage. The **production two-level model** (trained, multilingual, served) lives in [`detection-model-pipeline/`](detection-model-pipeline/); see [How the production model works](#how-the-production-model-works).
+
 ## Why This Exists
 
 Most AI text detectors are either overconfident, opaque, or awkward to embed inside agent workflows.
@@ -42,6 +44,27 @@ Most AI text detectors are either overconfident, opaque, or awkward to embed ins
 - reproducible benchmark and dataset evaluation scripts
 
 If you want a **triage tool** that stays cautious and leaves room for human review, this repo is built for that.
+
+## How the production model works
+
+The heavyweight detector behind Lynote is a **two-level model** that, in one forward pass, labels a document (`human / ai / mixed`) and every sentence (`human / ai / paraphrased`). It is trained, not rule-based — the full pipeline (data prep → train → calibrate → eval → serve) lives in [`detection-model-pipeline/`](detection-model-pipeline/).
+
+```mermaid
+flowchart LR
+    csv["detection-log export (CSV)"] --> prep["prepare · dedup + soft labels"]
+    prep --> train["train · joint doc + sentence heads"]
+    hub["public backbone · XLM-R / ModernBERT"] --> train
+    train --> cal["calibrate · temperature scaling"]
+    train --> eval["eval · two-level metrics"]
+    cal --> serve["serve · FastAPI, {code,msg,data}"]
+```
+
+- **One model, two levels.** Document and sentence heads share a backbone; `L = L_doc + α·L_sent`. Differentiable sentence-probability statistics feed the document head — which is what makes the `mixed` class trainable.
+- **Multilingual backbones.** XLM-R-large (default) or ModernBERT-base, optimized for en / zh / pt / es.
+- **Calibrated, not overconfident.** Temperature scaling softens probabilities without changing predictions; confidence bands reject < 0.33 ≤ low < 0.6 ≤ medium < 0.8 ≤ high.
+- **Deterministic & bounded.** Hash-pinned splits, synthetic demo data, and `make check` gates (manifest / demo / docs / tests). No weights, datasets, or service logs are shipped, and no accuracy claims are made.
+
+Full method: [`MODEL.md`](detection-model-pipeline/docs/MODEL.md) · [`ARCHITECTURE.md`](detection-model-pipeline/docs/ARCHITECTURE.md) · [`DATA_CONSTRUCTION.md`](detection-model-pipeline/docs/DATA_CONSTRUCTION.md) · [`API.md`](detection-model-pipeline/docs/API.md)
 
 ## Install
 
@@ -121,7 +144,7 @@ Use the root [SKILL.md](./SKILL.md) as the portable skill definition, and keep [
 
 We ran a reproducible evaluation on the public [HC3 dataset](https://huggingface.co/datasets/Hello-SimpleAI/HC3), using the English `finance`, `medicine`, and `open_qa` subsets with the first 100 rows from each subset.
 
-Snapshot of the current detector on that slice:
+Snapshot of the **lightweight local analyzer** on that slice (not the production two-level model):
 
 - Human mean score: `5.4`
 - AI mean score: `18.4`
@@ -194,7 +217,13 @@ Why it fits:
 ## Project Structure
 
 ```text
-ai-detector-skill/
+detection-model-pipeline/   # production two-level model — prepare → train → calibrate → eval → serve
+├── code/                    # pipeline stages (i..m) + harness validators
+├── model_entity/            # joint model: ModernBERT + XLM-R backbones
+├── data/demos/              # synthetic demo data (hash-pinned)
+└── docs/                    # ARCHITECTURE / MODEL / DATA_CONSTRUCTION / API
+
+ai-detector-skill/           # lightweight local analyzer (this page)
 ├── SKILL.md
 ├── scripts/
 │   ├── detect.py

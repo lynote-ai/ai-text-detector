@@ -27,6 +27,8 @@
 
 这个项目刻意保持克制。它输出的是 **AI 风格信号风险**，不是作者身份的证据。
 
+> **本仓库有两档。** 本页介绍的是**轻量本地分析器**——一个可解释、无网络的 CLI/Skill，用于快速初筛。**生产级的两级模型**（训练得到、多语言、可 serve）在 [`detection-model-pipeline/`](detection-model-pipeline/)；见 [生产模型工作原理](#生产模型工作原理)。
+
 ## 为什么要做这个项目
 
 很多 AI 文本检测器的问题很一致：过度自信、不透明，或者很难塞进代理工作流里。
@@ -40,6 +42,27 @@
 - 提供可复现的基准和数据集评测脚本
 
 如果你想要的是一个 **初筛工具**，而不是一个“替你裁决”的系统，这个仓库就是为这个目标设计的。
+
+## 生产模型工作原理
+
+Lynote 背后的重量级检测器是一个**两级模型**：单次前向同时给出文档级（`human / ai / mixed`）和每个句子级（`human / ai / paraphrased`）的判断。它是**训练得到的，不是规则**——完整流程（数据准备 → 训练 → 校准 → 评估 → serve）在 [`detection-model-pipeline/`](detection-model-pipeline/)。
+
+```mermaid
+flowchart LR
+    csv["检测日志导出 (CSV)"] --> prep["准备 · 去重 + 软标签"]
+    prep --> train["训练 · 文档头 + 句子头联合"]
+    hub["公开骨干 · XLM-R / ModernBERT"] --> train
+    train --> cal["校准 · 温度缩放"]
+    train --> eval["评估 · 两级指标"]
+    cal --> serve["serve · FastAPI, {code,msg,data}"]
+```
+
+- **一个模型，两个层级。** 文档头与句子头共享骨干；`L = L_doc + α·L_sent`。可微的句子概率统计量喂给文档头——这正是让 `mixed` 类可训练的关键。
+- **多语言骨干。** XLM-R-large（默认）或 ModernBERT-base，面向 en / zh / pt / es 优化。
+- **经过校准、不过度自信。** 温度缩放只软化概率、不改变预测；置信带 reject < 0.33 ≤ low < 0.6 ≤ medium < 0.8 ≤ high。
+- **确定性、有边界。** 哈希固定的切分、合成 demo 数据、`make check` 门禁（manifest / demo / docs / tests）。不发权重、数据集或服务日志，也不做准确率声明。
+
+完整方法：[`MODEL.zh-CN.md`](detection-model-pipeline/docs/MODEL.zh-CN.md) · [`ARCHITECTURE.zh-CN.md`](detection-model-pipeline/docs/ARCHITECTURE.zh-CN.md) · [`DATA_CONSTRUCTION.zh-CN.md`](detection-model-pipeline/docs/DATA_CONSTRUCTION.zh-CN.md) · [`API.zh-CN.md`](detection-model-pipeline/docs/API.zh-CN.md)
 
 ## 快速开始
 
@@ -119,7 +142,7 @@ cp -R ai-detector-skill "$CODEX_HOME/skills/"
 
 我们基于公开的 [HC3 数据集](https://huggingface.co/datasets/Hello-SimpleAI/HC3) 做了一轮可复现测试，使用英文 `finance`、`medicine`、`open_qa` 三个子集，每个子集取前 100 条问答对。
 
-当前版本在这组样本上的摘要表现：
+**轻量本地分析器**在这组样本上的摘要表现（非生产两级模型）：
 
 - Human mean score: `5.4`
 - AI mean score: `18.4`
@@ -192,7 +215,13 @@ make eval-hc3
 ## 项目结构
 
 ```text
-ai-detector-skill/
+detection-model-pipeline/   # 生产两级模型 — 准备 → 训练 → 校准 → 评估 → serve
+├── code/                    # 流程阶段 (i..m) + harness 校验器
+├── model_entity/            # 联合模型：ModernBERT + XLM-R 骨干
+├── data/demos/              # 合成 demo 数据（哈希固定）
+└── docs/                    # ARCHITECTURE / MODEL / DATA_CONSTRUCTION / API
+
+ai-detector-skill/           # 轻量本地分析器（本页）
 ├── SKILL.md
 ├── scripts/
 │   ├── detect.py

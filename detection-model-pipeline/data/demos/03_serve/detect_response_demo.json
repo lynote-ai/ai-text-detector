@@ -1,0 +1,110 @@
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "version": "V2-hier-1",
+    "neatVersion": "V2h",
+    "scanId": "baa6fcf989c84823950843f082a5b2ae",
+    "documents": [
+      {
+        "paragraphs": [
+          {
+            "startSentenceIndex": 0,
+            "numSentences": 2,
+            "completelyGeneratedProb": 0.6
+          },
+          {
+            "startSentenceIndex": 2,
+            "numSentences": 1,
+            "completelyGeneratedProb": 0.72
+          }
+        ],
+        "sentences": [
+          {
+            "generatedProb": 0.88,
+            "sentence": "Synthetic essays are a convenient way to test detection models without touching real user data.",
+            "perplexity": 0,
+            "classProbabilities": {
+              "human": 0.12,
+              "ai": 0.84,
+              "paraphrased": 0.04
+            },
+            "highlightSentenceForAi": true,
+            "specialHighlightType": null
+          },
+          {
+            "generatedProb": 0.32,
+            "sentence": "Every sentence in this example was authored from scratch for demonstration purposes.",
+            "perplexity": 0,
+            "classProbabilities": {
+              "human": 0.68,
+              "ai": 0.28,
+              "paraphrased": 0.04
+            },
+            "highlightSentenceForAi": false,
+            "specialHighlightType": null
+          },
+          {
+            "generatedProb": 0.72,
+            "sentence": "Detection scores in this response are illustrative only and do not come from a real inference run.",
+            "perplexity": 0,
+            "classProbabilities": {
+              "human": 0.28,
+              "ai": 0.68,
+              "paraphrased": 0.04
+            },
+            "highlightSentenceForAi": true,
+            "specialHighlightType": null
+          }
+        ],
+        "classProbabilities": {
+          "human": 0.18,
+          "ai": 0.64,
+          "mixed": 0.18
+        },
+        "confidenceThresholdsRaw": {
+          "identity": {
+            "human": {
+              "reject": 0.33,
+              "low": 0.6,
+              "medium": 0.8
+            },
+            "ai": {
+              "reject": 0.33,
+              "low": 0.6,
+              "medium": 0.8
+            },
+            "mixed": {
+              "reject": 0.33,
+              "low": 0.6,
+              "medium": 0.8
+            }
+          }
+        },
+        "confidenceScoresRaw": {
+          "identity": {
+            "human": 0.18,
+            "ai": 0.64,
+            "mixed": 0.18
+          }
+        },
+        "subclass": {},
+        "pageNumber": 0,
+        "language": "en",
+        "inputText": "Synthetic essays are a convenient way to test detection models without touching real user data. Every sentence in this example was authored from scratch for demonstration purposes.\n\nDetection scores in this response are illustrative only and do not come from a real inference run.",
+        "documentId": "1fec35b9e74b48cf990681402a1637ed",
+        "predictedClass": "ai",
+        "confidenceScore": 0.64,
+        "confidenceCategory": "medium",
+        "documentClassification": "AI_ONLY",
+        "resultMessage": "Moderate confidence that the text was written by AI.",
+        "completelyGeneratedProb": 0.64,
+        "averageGeneratedProb": 0.64,
+        "overallBurstiness": 0,
+        "writingStats": {},
+        "version": "V2-hier-1",
+        "neatVersion": "V2h"
+      }
+    ]
+  }
+}

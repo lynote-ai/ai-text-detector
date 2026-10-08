@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# 训练产物与完整数据集绝不入库。
+model_outputs*/
+data/*
+!data/README.md
+!data/README.zh-CN.md
+!data/demos/
+!data/demos/**
+
+# 本地环境变量覆盖。
+.env
+.env.*
+!.env.example

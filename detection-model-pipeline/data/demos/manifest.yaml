@@ -1,0 +1,25 @@
+schema_version: 1
+record_limit_per_stage: 20
+selection_policy: 'synthetic-records-authored-for-publication'
+stages:
+- stage: '01_prepare'
+  description: 'Deduplicated two-level soft-label records with the deterministic train/validation split'
+  files:
+  - path: 'data/demos/01_prepare/train_hier_demo.jsonl'
+    record_count: 20
+    sha256: 786e5d3aef3aeb4d7fefa15c1406f06e236f7dba05c8dd73aa33ee9f1c8bcec1
+  - path: 'data/demos/01_prepare/val_hier_demo.jsonl'
+    record_count: 5
+    sha256: cd7736751acc8f1dd8a57410eece61792291f8c450a00c73f135dcf10fac01b5
+- stage: '02_calibrate'
+  description: 'Document-head temperature calibration artifact'
+  files:
+  - path: 'data/demos/02_calibrate/calibration_demo.json'
+    record_count: 1
+    sha256: ae120a7bf191bf319061a7eebe8b935202059d1eed9c607298f55070119ae920
+- stage: '03_serve'
+  description: 'Full HTTP envelope for one detect request'
+  files:
+  - path: 'data/demos/03_serve/detect_response_demo.json'
+    record_count: 1
+    sha256: 20fd21537b9a9dba6e9e7e176ac173bcd5bb301837a2e8b030d6c4e5d228db01

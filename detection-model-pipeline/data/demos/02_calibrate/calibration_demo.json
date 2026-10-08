@@ -1,0 +1,9 @@
+{
+  "temperature": 1.1842,
+  "doc_class_names": [
+    "human",
+    "ai",
+    "mixed"
+  ],
+  "fitted_samples": 5
+}

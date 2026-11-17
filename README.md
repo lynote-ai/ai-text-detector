@@ -362,9 +362,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## Related Projects
 
-- [Lynote AI Humanize Text](https://github.com/lynote-ai/humanize-text)
-- [Lynote AI Image Detector](https://github.com/lynote-ai/ai-image-detector)
-- [Lynote](https://lynote.ai/)
+- [AI Humanize Text](https://github.com/lynote-ai/humanize-text)
+- [AI Image Detector](https://github.com/lynote-ai/ai-image-detector)
+- [AI Tutor](https://github.com/lynote-ai/ai-tutor)
 
 ## License
 

@@ -1,310 +1,379 @@
-# Explainable AI Text Risk Analyzer
+# Lynote AI Text Detector
 
 <p align="center">
-  <img src="assets/hero.svg" alt="AI Detector Skill hero" width="100%" />
+  <img src="assets/hero.svg" alt="Lynote AI Text Detector" width="100%" />
 </p>
 
 <p align="center">
   <a href="https://github.com/lynote-ai/ai-text-detector/actions/workflows/ci.yml"><img src="https://github.com/lynote-ai/ai-text-detector/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/python-3.9%2B-3776ab" alt="Python 3.9+" />
   <img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT License" />
-  <img src="https://img.shields.io/badge/network-none-f59e0b" alt="No Network" />
 </p>
 
 <p align="center">
-  An explainable, cautious AI-generated text risk analyzer for coding agents and local workflows.
+  <strong>Detect AI-Generated Text at Document and Sentence Levels</strong>
+  <br />
+  Analyze writing patterns, identify potentially AI-generated sentences, and review content classified as human-written, AI-generated, or mixed.
 </p>
 
 <p align="center">
   <a href="./README.zh-CN.md">简体中文</a>
   ·
-  <a href="#install">Install</a>
+  <a href="#features">Features</a>
   ·
-  <a href="#evaluation">Evaluation</a>
+  <a href="#how-it-works">How It Works</a>
   ·
   <a href="#use-cases">Use Cases</a>
   ·
-  <a href="https://lynote.ai/ai-detector-api"><b>Detector API</b></a>
+  <a href="#installation">Installation</a>
 </p>
 
-> 🚀 **New: the Lynote AI Detector API is live.** Need AI-text detection inside your own app, LMS, or moderation pipeline? Call Lynote's production detector with one REST request — no model to train or host. **[Get an API key → lynote.ai/ai-detector-api](https://lynote.ai/ai-detector-api)**
+Lynote AI Text Detector is an AI-generated text detection project for analyzing essays, articles, academic writing, notes, transcripts, and other written content. Its production model is designed to examine text at two levels: the overall document and individual sentences.
 
-**Other Quality Projects**</br>
-AI Humanize Text:https://github.com/lynote-ai/humanize-text</br>
-AI Image Detector:https://github.com/lynote-ai/ai-image-detector</br>
+Rather than treating every document as entirely human-written or entirely AI-generated, the production model supports **Human**, **AI**, and **Mixed** document classifications, alongside sentence-level **Human**, **AI**, and **Paraphrased** classifications.
 
-> **Two tiers in this repo.** This page documents the **lightweight local analyzer** — an explainable, no-network CLI/skill for fast triage. The **production two-level model** (trained, multilingual, served) lives in [`detection-model-pipeline/`](detection-model-pipeline/); see [How the production model works](#how-the-production-model-works).
+The repository also includes a separate lightweight local analyzer for explainable, offline text-risk triage. The local analyzer and the production two-level model are different components; their capabilities and evaluation results should not be conflated.
 
-## Why This Exists
+## Features
 
-Most AI text detectors are either overconfident, opaque, or awkward to embed inside agent workflows.
+### Document-Level AI Text Detection
 
-`ai-detector-skill` takes the opposite approach:
+Analyze a complete document and classify its overall writing patterns. The production model supports:
 
-- explainable weighted signals instead of hidden model claims
-- a local CLI and Python API that are easy to script
-- a short-text guardrail that refuses to overstate weak evidence
-- skill-ready packaging for Codex, Claude Code, and other repo-aware agents
-- reproducible benchmark and dataset evaluation scripts
+- **Human** — classified as human-written.
+- **AI** — classified as AI-generated.
+- **Mixed** — a document containing a combination of writing patterns.
 
-If you want a **triage tool** that stays cautious and leaves room for human review, this repo is built for that.
+### Sentence-Level AI Detection
 
-## How the production model works
+Go beyond a single document-level result. The production model also classifies individual sentences as:
 
-The heavyweight detector behind Lynote is a **two-level model** that, in one forward pass, labels a document (`human / ai / mixed`) and every sentence (`human / ai / paraphrased`). It is trained, not rule-based — the full pipeline (data prep → train → calibrate → eval → serve) lives in [`detection-model-pipeline/`](detection-model-pipeline/).
+- **Human**
+- **AI**
+- **Paraphrased**
+
+Sentence-level results can help reviewers locate sections that warrant closer attention. They should be interpreted as model classifications, not proof of who wrote a sentence.
+
+### Mixed-Content Analysis
+
+Real-world writing may combine original human writing, AI-generated passages, and edited or paraphrased material. The production model includes a `mixed` document class to represent this kind of content rather than forcing every document into a binary human-or-AI label.
+
+### Explainable Local Analysis
+
+The lightweight local analyzer returns an AI-like writing risk estimate with supporting information:
+
+- Risk score from 0 to 100.
+- Verdict and confidence level.
+- Strongest weighted signals.
+- Caveats and limitations.
+- Suggested next steps when useful.
+
+This local analyzer is intended for cautious preliminary review. It is not the production two-level classifier.
+
+### Multilingual Model Development
+
+The production pipeline is designed around multilingual backbones, including XLM-R and ModernBERT, with the current project documentation describing work focused on English, Chinese, Portuguese, and Spanish.
+
+### Responsible Interpretation
+
+AI-text detection is inherently uncertain. Results should be treated as indicators for review, not definitive proof of authorship, misconduct, or intent. Short samples and high-stakes decisions require particular caution.
+
+## How It Works
+
+The production detection pipeline uses a shared model backbone with two classification heads:
+
+1. **Document head** — predicts a document-level class: `human`, `ai`, or `mixed`.
+2. **Sentence head** — predicts sentence-level classes: `human`, `ai`, or `paraphrased`.
+
+The joint training objective combines document-level and sentence-level learning:
+
+`L = L_doc + α · L_sent`
 
 ```mermaid
-flowchart LR
-    csv["detection-log export (CSV)"] --> prep["prepare · dedup + soft labels"]
-    prep --> train["train · joint doc + sentence heads"]
-    hub["public backbone · XLM-R / ModernBERT"] --> train
-    train --> cal["calibrate · temperature scaling"]
-    train --> eval["eval · two-level metrics"]
-    cal --> serve["serve · FastAPI, {code,msg,data}"]
+flowchart TD
+    A[Input document] --> B[Text processing]
+    B --> C[Shared model backbone]
+    C --> D[Document-level head]
+    C --> E[Sentence-level head]
+    D --> F[Human / AI / Mixed]
+    E --> G[Human / AI / Paraphrased]
+    F --> H[Detection output]
+    G --> H
+    H --> I[Human review and interpretation]
 ```
 
-- **One model, two levels.** Document and sentence heads share a backbone; `L = L_doc + α·L_sent`. Differentiable sentence-probability statistics feed the document head — which is what makes the `mixed` class trainable.
-- **Multilingual backbones.** XLM-R-large (default) or ModernBERT-base, optimized for en / zh / pt / es.
-- **Calibrated, not overconfident.** Temperature scaling softens probabilities without changing predictions; confidence bands reject < 0.33 ≤ low < 0.6 ≤ medium < 0.8 ≤ high.
-- **Deterministic & bounded.** Hash-pinned splits, synthetic demo data, and `make check` gates (manifest / demo / docs / tests). No weights, datasets, or service logs are shipped, and no accuracy claims are made.
+The repository contains both the production model pipeline and a lightweight local analyzer. See the [project structure](#project-structure) and the technical documentation for the distinction.
 
-Full method: [`MODEL.md`](detection-model-pipeline/docs/MODEL.md) · [`ARCHITECTURE.md`](detection-model-pipeline/docs/ARCHITECTURE.md) · [`DATA_CONSTRUCTION.md`](detection-model-pipeline/docs/DATA_CONSTRUCTION.md) · [`API.md`](detection-model-pipeline/docs/API.md)
+### Production Model Documentation
 
-## Lynote AI Detector API — for developers
+- [Architecture](detection-model-pipeline/docs/ARCHITECTURE.md)
+- [Model methodology](detection-model-pipeline/docs/MODEL.md)
+- [Data construction](detection-model-pipeline/docs/DATA_CONSTRUCTION.md)
+- [API implementation notes](detection-model-pipeline/docs/API.md)
 
-The local analyzer here is built for cautious, offline triage, and the production model above ships as a pipeline, not weights. If you need production-grade detection **inside your own product**, the [Lynote AI Detector API](https://lynote.ai/ai-detector-api) serves Lynote's production detector through a single endpoint:
+## Use Cases
 
-- **One synchronous REST call** — send text, get structured JSON back with an overall classification, confidence, and sentence-level signals.
-- **Covers major models** — detects patterns associated with ChatGPT, Gemini, Claude, DeepSeek, and more.
-- **Multilingual** — the same endpoint handles multiple languages.
-- **Server-side keys** — Bearer-token auth, with separate credentials per environment.
-- **Simple billing** — 1 credit per input word (Chinese is counted per character: 1 character = 1 word).
+### Teacher Triage
 
-```bash
-curl https://api.lynote.ai/v1/detect \
-  -H "Authorization: Bearer $LYNOTE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"text": "The rapid adoption of large language models has reshaped how teams write."}'
-```
+A teacher receives a student essay or reflection and wants an initial signal before conducting a closer review.
 
-<p align="center">
-  <a href="https://lynote.ai/ai-detector-api"><img src="https://img.shields.io/badge/Get_your_API_key-Lynote_AI_Detector_API-blue?style=for-the-badge" alt="Get your Lynote AI Detector API key"></a>
-</p>
+Suggested workflow:
 
-Plans, rate limits, and full docs: **[lynote.ai/ai-detector-api](https://lynote.ai/ai-detector-api)**. As with any detector, treat results as a signal for human review, not proof of authorship.
+1. Run the detector on the submitted text.
+2. Review the available document-level result and, where supported, sentence-level classifications.
+3. Consider the result alongside the student's previous writing and other relevant context.
 
-## Install
+Detection results should never be treated as proof of academic misconduct.
 
-```bash
-pip install -e .
-ai-detect examples/sample_ai_like.txt --json
-```
+### Editorial Review
 
-Or bootstrap a local environment:
+An editor wants to review articles, product descriptions, guest posts, or other submitted content for writing patterns that may deserve closer attention.
 
-```bash
-bash scripts/setup.sh
-```
+Why it fits:
+
+- Longer-form prose provides more context for review than very short snippets.
+- Explainable signals can help editors decide which passages to examine.
+- Human editorial judgment remains essential.
+
+### Trust and Safety Queueing
+
+A moderation team wants to prioritize suspicious long-form posts for manual review rather than automatically removing content.
+
+Why it fits:
+
+- Detection signals can support review prioritization.
+- Document-level and sentence-level results can provide different views of the same text.
+- Final moderation decisions remain with human reviewers.
+
+### Internal Content Quality Review
+
+A team wants to review human-written and AI-assisted drafts and identify passages that may need additional editing.
+
+Why it fits:
+
+- Detection results can be used as one signal during content review.
+- Sentence-level analysis can help locate specific passages for closer examination.
+- Results should be interpreted in context, not as definitive authorship claims.
+
+## Detection Results: Two Different Components
+
+This repository includes two distinct detection components. Their outputs should not be treated as interchangeable.
+
+### Production Two-Level Model
+
+The production pipeline is designed to provide:
+
+| Analysis level | Supported classifications |
+|---|---|
+| Document | `human`, `ai`, `mixed` |
+| Sentence | `human`, `ai`, `paraphrased` |
+
+The pipeline includes data preparation, training, calibration, evaluation, and serving code. The repository documentation does not make a general production-accuracy claim.
+
+### Lightweight Local Analyzer
+
+The local analyzer provides a separate risk estimate and evidence signals. Its verdict values are:
+
+- `insufficient_text`
+- `low_ai_likelihood`
+- `mixed_or_uncertain`
+- `high_ai_likelihood`
 
 Example output:
 
 ```text
 Conclusion: AI-like signals are present, but this medium-confidence score is a risk estimate rather than proof.
+
 Score: 84/100
 Confidence: medium
 Verdict: high_ai_likelihood
 Words analyzed: 256
 ```
 
-## What You Get
+The example illustrates the local analyzer's output format; it is not a claim about expected accuracy or production-model output.
 
-- `score`: 0-100 AI-like writing risk estimate
-- `verdict`: `insufficient_text`, `low_ai_likelihood`, `mixed_or_uncertain`, or `high_ai_likelihood`
-- `confidence`: currently `low` or `medium`
-- `signals`: strongest weighted evidence signals
-- `caveats`: warnings that stay attached to the result
-- `next_steps`: practical follow-up actions when useful
+## Installation
 
-This is designed to help an agent say:
+The lightweight local analyzer can be installed and run with Python.
 
-- "AI-like signals are present."
-- "The sample is too short for a meaningful estimate."
-- "This should be reviewed against known writing samples."
+### Requirements
 
-Not:
+- Python 3.9 or later.
 
-- "This was definitely written by AI."
-- "The detector proves misconduct."
+### Install
 
-## Usage
+```bash
+git clone https://github.com/lynote-ai/ai-text-detector.git
+cd ai-text-detector
+pip install -e .
+```
 
-### CLI
+Alternatively, initialize a local environment with:
+
+```bash
+bash scripts/setup.sh
+```
+
+### Run Detection
+
+Analyze a text file:
 
 ```bash
 ai-detect examples/sample_ai_like.txt
-cat essay.txt | ai-detect --json
-python scripts/detect.py examples/sample_human_like.txt --json
 ```
 
-### Python API
+Return JSON:
+
+```bash
+ai-detect examples/sample_ai_like.txt --json
+```
+
+Read text from standard input:
+
+```bash
+cat essay.txt | ai-detect --json
+```
+
+## Python Usage
+
+The lightweight local analyzer can also be called from Python:
 
 ```python
 from aidetect import analyze_text
 
-text = open("essay.txt", encoding="utf-8").read()
+with open("essay.txt", encoding="utf-8") as file:
+    text = file.read()
+
 result = analyze_text(text)
 
-print(result.score, result.confidence, result.verdict)
+print("Score:", result.score)
+print("Confidence:", result.confidence)
+print("Verdict:", result.verdict)
+
 for signal in result.strongest_signals():
     print(signal.name, signal.note)
 ```
 
-### Local Skill Install
-
-```bash
-cp -R ai-detector-skill "$CODEX_HOME/skills/"
-```
-
-Use the root [SKILL.md](./SKILL.md) as the portable skill definition, and keep [AGENTS.md](./AGENTS.md) at the repo root for repo-aware agents.
-
 ## Evaluation
 
-We ran a reproducible evaluation on the public [HC3 dataset](https://huggingface.co/datasets/Hello-SimpleAI/HC3), using the English `finance`, `medicine`, and `open_qa` subsets with the first 100 rows from each subset.
+The repository includes a reproducible evaluation of the **lightweight local analyzer** using the public [HC3 dataset](https://huggingface.co/datasets/Hello-SimpleAI/HC3).
 
-Snapshot of the **lightweight local analyzer** on that slice (not the production two-level model):
+The documented evaluation uses the English `finance`, `medicine`, and `open_qa` subsets, taking the first 100 rows from each subset.
 
-- Human mean score: `5.4`
-- AI mean score: `18.4`
-- Mean separation: `13.0` points
-- Human coverage: `0.427`
-- AI coverage: `0.920`
-- Covered accuracy at `score >= 45`: `0.317`
+### Evaluation Snapshot
 
-What that means in practice:
+| Metric | Result |
+|---|---:|
+| Human mean score | 5.4 |
+| AI mean score | 18.4 |
+| Mean separation | 13.0 points |
+| Human coverage | 0.427 |
+| AI coverage | 0.920 |
+| Covered accuracy at `score >= 45` | 0.317 |
 
-- the detector separates human and AI answers on average, but only weakly on HC3
-- the short-text guardrail is doing useful work, especially on shorter human answers
-- the current thresholds are conservative, which keeps false confidence down but also lowers recall
-- this tool works better as **triage + explanation** than as a stand-alone classifier
+These results indicate that the local analyzer separates human and AI answers on average in this sample, but its measured covered accuracy is limited. It is better understood as a cautious triage and explanation tool than as a stand-alone authorship classifier.
 
-See the full report in [docs/HC3_EVALUATION.md](./docs/HC3_EVALUATION.md).
+**Scope note:** These metrics apply only to the lightweight local analyzer on the documented HC3 sample. They are not benchmark results for the production two-level model.
 
-Reproduce it with:
+Read the [full HC3 evaluation report](docs/HC3_EVALUATION.md).
+
+Reproduce the evaluation:
 
 ```bash
 make eval-hc3
 ```
-
-## Use Cases
-
-### Teacher Triage
-
-A teacher receives a polished 400-word reflection and wants a cautious signal before doing manual review.
-
-Suggested workflow:
-
-1. Run `ai-detect submission.txt --json`.
-2. Read the strongest signals and caveats.
-3. Compare the passage with known writing samples before making any judgment.
-
-### Editorial Review
-
-An editor wants to spot formulaic product reviews or guest posts before spending time on manual edits.
-
-Why it fits:
-
-- medium-length prose works better than short snippets
-- explainable signals help justify why a draft feels templated
-
-### Trust And Safety Queueing
-
-A moderation team wants to sort suspicious long-form posts into a manual review queue, not auto-remove them.
-
-Why it fits:
-
-- the tool is conservative by design
-- it helps with prioritization more than enforcement
-
-### Internal Content QA
-
-A team compares human drafts and AI-assisted drafts to see where language starts sounding too generic.
-
-Why it fits:
-
-- the score is useful as a relative signal across versions
-- strongest signals can guide rewriting
-
-## Not For
-
-- disciplinary decisions about a named student or employee
-- treating a single score as proof of cheating or fraud
-- very short samples under about 80 words
-- high-stakes authorship disputes without known-sample comparison
 
 ## Project Structure
 
 ```text
-detection-model-pipeline/   # production two-level model — prepare → train → calibrate → eval → serve
-├── code/                    # pipeline stages (i..m) + harness validators
-├── model_entity/            # joint model: ModernBERT + XLM-R backbones
-├── data/demos/              # synthetic demo data (hash-pinned)
-└── docs/                    # ARCHITECTURE / MODEL / DATA_CONSTRUCTION / API
-
-ai-detector-skill/           # lightweight local analyzer (this page)
-├── SKILL.md
-├── scripts/
-│   ├── detect.py
-│   ├── setup.sh
-│   ├── benchmark.py
-│   └── evaluate_hc3.py
-├── references/
-│   └── api-reference.md
-├── assets/
-│   ├── hero.svg
-│   ├── score-bands.svg
-│   ├── workflow.svg
-│   └── templates/
-│       └── report.md
-├── src/aidetect/
-├── tests/
+ai-text-detector/
+├── detection-model-pipeline/   # Production two-level model pipeline
+│   ├── code/                   # Pipeline stages and validators
+│   ├── model_entity/           # Model components and backbones
+│   ├── data/demos/             # Synthetic demo data
+│   └── docs/                   # Model and pipeline documentation
+├── assets/                     # Project images and diagrams
+├── docs/                       # Evaluation reports
+├── examples/                   # Example input text
+├── references/                 # Reference documentation
+├── scripts/                    # Local detection and evaluation scripts
+├── src/aidetect/               # Lightweight local analyzer
+├── tests/                      # Tests
 ├── AGENTS.md
-└── README.md
+├── SKILL.md
+├── README.md
+├── README.zh-CN.md
+├── pyproject.toml
+└── requirements.txt
 ```
 
-## Dev Commands
+## Developer Integration
+
+The primary focus of this project is AI-generated text detection. For local use, the repository provides a CLI and Python interface through the lightweight analyzer.
+
+For hosted integration into another application, see the optional [Lynote AI Detector API](https://lynote.ai/ai-detector-api). API access is an additional integration option, not the central purpose of this repository.
+
+Technical references:
+
+- [Pipeline API documentation](detection-model-pipeline/docs/API.md)
+- [Local reference documentation](references/api-reference.md)
+
+## Development
+
+Run the test suite:
 
 ```bash
 make test
+```
+
+Run the demo:
+
+```bash
 make demo
+```
+
+Run the benchmark:
+
+```bash
 make benchmark
+```
+
+Run the HC3 evaluation:
+
+```bash
 make eval-hc3
 ```
 
-## CI
+### Continuous Integration
 
-GitHub Actions automatically runs:
-
-- `make test` on Python `3.9`, `3.11`, and `3.13`
-- `make benchmark` to regenerate the synthetic benchmark report
-- `make eval-hc3` to regenerate the HC3 evaluation report
-- upload of `docs/BENCHMARK.md` and `docs/HC3_EVALUATION.md` as workflow artifacts
+GitHub Actions is configured to run tests on Python 3.9, 3.11, and 3.13, regenerate benchmark and HC3 evaluation reports, and upload the reports as workflow artifacts.
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
+Contributions are welcome. Useful areas include:
 
-Good contributions usually improve one of these:
+- Document-level and sentence-level detection.
+- Multilingual detection.
+- Explainable detection signals.
+- Evaluation methodology and benchmark coverage.
+- Responsible interpretation and safer user guidance.
 
-- clearer evidence signals
-- safer wording and UX
-- multilingual handling that stays explainable
-- reproducible evaluation coverage
-- agent integration ergonomics
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
-## Need an API?
+## Related Projects
 
-🔌 Visit **[lynote.ai/ai-detector-api](https://lynote.ai/ai-detector-api)** to get your AI Detector API key.
+- [Lynote AI Humanize Text](https://github.com/lynote-ai/humanize-text)
+- [Lynote AI Image Detector](https://github.com/lynote-ai/ai-image-detector)
+- [Lynote](https://lynote.ai/)
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <strong>Lynote AI Text Detector</strong>
+  <br />
+  AI-generated text detection at document and sentence levels.
+</p>

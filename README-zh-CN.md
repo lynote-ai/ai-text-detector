@@ -374,7 +374,7 @@ GitHub Actions 配置为在 Python 3.9、3.11 和 3.13 环境下运行测试，�
 
 本项目采用 MIT License，详情请查看 [LICENSE](LICENSE)。
 
-##特别鸣谢
+## 特别鸣谢
 AtomGit:在国内托管AIRI，帮助中国大陆用户更快访问项目与下载Release.
 
 ---

@@ -1,7 +1,7 @@
 # Lynote AI Text Detector：AI 文本检测器
 
 <p align="center">
-  <img src="assets/hero.svg" alt="Lynote AI Text Detector" width="100%" />
+  <img src="assets/hero.png" alt="Lynote AI Text Detector" width="100%" />
 </p>
 
 <p align="center">
